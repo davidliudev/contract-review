@@ -1,0 +1,33 @@
+{
+  "name": "contract-csp-share",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:cross-space-official/contract-csp-sbt.git",
+  "author": "sli-xspace <sidney@meta-bytes.io>",
+  "license": "MIT",
+  "devDependencies": {
+    "@ethersproject/abi": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/hardhat-upgrades": "^1.26.0",
+    "@typechain/ethers-v5": "^10.2.1",
+    "@typechain/hardhat": "^6.1.6",
+    "chai": "^4.3.7",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.14.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.2",
+    "typechain": "^8.1.1"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "dotenv": "^16.0.3",
+    "ethereum-waffle": "^4.0.10"
+  }
+}
