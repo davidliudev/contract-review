@@ -55,7 +55,7 @@ contract CrossSpaceShareUserV2 is Ownable {
     }
 
     function getAmountInWeiByValue(uint256 supplyInWei, uint256 priceInWei) public pure returns (uint256) {
-        uint256 np =priceInWei* 3e54 * PRICE_DIVIDER / 1 ether;
+        uint256 np =priceInWei* 3e36 * PRICE_DIVIDER;
         uint256 a = math.floorCbrt(np + supplyInWei * supplyInWei * supplyInWei) - supplyInWei;
 
         return a;
@@ -93,6 +93,12 @@ contract CrossSpaceShareUserV2 is Ownable {
         emit TradeUser(sender, author, true, amountInWei, price, protocolFee, subjectFee, amountInWei + amountInWei);
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success2, ) = author.call{value: subjectFee}("");
+
+        // Return the excess payment
+        if (msg.value > price + protocolFee + subjectFee) {
+            (bool success3, ) = sender.call{value: msg.value - price - protocolFee - subjectFee}("");
+            require(success3, "Unable to send funds");
+        }
         require(success1 && success2, "Unable to send funds");
     }
 

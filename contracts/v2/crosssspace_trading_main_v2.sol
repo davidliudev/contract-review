@@ -52,7 +52,7 @@ contract CrossSpaceTradingMain is Ownable {
         return result;
     }
 
-    function getTotalSellPriceDetails(address author, string calldata subject, uint256 amountInWei) public view returns (uint256[] memory) {
+    function getTotalSellPriceDetails(address author, string calldata subject, uint256 amount) public view returns (uint256[] memory) {
         // Assert that the contract addresses are not null
         require(contentContractAddress != address(0), "Content contract address is null");
         require(userContractAddress != address(0), "User contract address is null");
@@ -64,13 +64,13 @@ contract CrossSpaceTradingMain is Ownable {
          // Let's calculate the amount of user shares to sell for later
         uint256 userTotalShare = userContractBalance[author][subject][msg.sender];
         uint256 contentTotalBalance = contentContract.sharesBalance(author,subject,msg.sender);
-        require(contentTotalBalance >= amountInWei, "Insufficient shares");
-        uint256 userShareToSell = amountInWei * userTotalShare / contentTotalBalance; 
+        require(contentTotalBalance >= amount, "Insufficient shares");
+        uint256 userShareToSell = amount * userTotalShare / contentTotalBalance;
 
 
         // Let's calculate the fees for content
-        uint256 contentTotalBeforeFee = contentContract.getSellPrice(author, subject, amountInWei);
-        uint256 contentTotalAfterFee = contentContract.getSellPriceAfterFee(author, subject, amountInWei);
+        uint256 contentTotalBeforeFee = contentContract.getSellPrice(author, subject, amount);
+        uint256 contentTotalAfterFee = contentContract.getSellPriceAfterFee(author, subject, amount);
 
         // Let's calculate the fees for user
         uint256 userShareFeeBeforeFee = shareUserContract.getSellPrice(author, userShareToSell);

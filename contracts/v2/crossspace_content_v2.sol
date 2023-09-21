@@ -86,6 +86,11 @@ contract CrossSpaceShareContentV2 is Ownable {
         emit TradeContent(sender, author, subject, true, amount, price, protocolFee, subjectFee, supply + amount);
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success2, ) = author.call{value: subjectFee}("");
+        // If the sender send any extra money, send it back
+        if (msg.value > price + protocolFee + subjectFee) {
+            (bool success3, ) = sender.call{value: msg.value - price - protocolFee - subjectFee}("");
+            require(success3, "Unable to send funds");
+        }
         require(success1 && success2, "Unable to send funds");
     }
 
