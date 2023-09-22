@@ -90,7 +90,7 @@ contract CrossSpaceShareUserV2 is Ownable {
         require(msg.value >= price + protocolFee + subjectFee, "Insufficient payment");
         sharesBalanceInWei[author][sender] = sharesBalanceInWei[author][sender] + amountInWei;
         sharesSupplyInWei[author] = supplyInWei + amountInWei;
-        emit TradeUser(sender, author, true, amountInWei, price, protocolFee, subjectFee, amountInWei + amountInWei);
+        emit TradeUser(sender, author, true, amountInWei, price, protocolFee, subjectFee, supplyInWei + amountInWei);
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success2, ) = author.call{value: subjectFee}("");
 
