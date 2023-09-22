@@ -8,11 +8,14 @@ import "./crossspace_user_v2.sol";
 contract CrossSpaceTradingMain is Ownable {
     address public contentContractAddress;
     address public userContractAddress;
+    bool public isPaused;
 
     // Author => Subject => (Holder => User Contract Balance)
     mapping(address => mapping(string => mapping(address => uint256))) public userContractBalance;
 
-    constructor() {}
+    constructor() {
+        isPaused = true;
+    }
 
     function setContentContractAddress(address _contentContractAddress) public onlyOwner {
         contentContractAddress = _contentContractAddress;
@@ -20,6 +23,10 @@ contract CrossSpaceTradingMain is Ownable {
 
     function setUserContractAddress(address _userContractAddress) public onlyOwner {
         userContractAddress = _userContractAddress;
+    }
+
+    function setPaused(bool _isPaused) public onlyOwner {
+        isPaused = _isPaused;
     }
 
     function getTotalBuyPriceDetails(address author, string calldata subject, uint256 amount) public view returns (uint256[] memory) {
@@ -52,7 +59,21 @@ contract CrossSpaceTradingMain is Ownable {
         return result;
     }
 
-    function getTotalSellPriceDetails(address author, string calldata subject, uint256 amount) public view returns (uint256[] memory) {
+    function _getUserAmountToSell(address author, string calldata subject, address holder, uint256 totalAmount) private view returns (uint256) {
+        // Assert that the contract addresses are not null
+        require(contentContractAddress != address(0), "Content contract address is null");
+        CrossSpaceShareContentV2 contentContract = CrossSpaceShareContentV2(contentContractAddress);
+
+        // Let's calculate the amount of user shares to sell for later
+        uint256 userTotalShare = userContractBalance[author][subject][holder];
+        uint256 contentTotalBalance = contentContract.sharesBalance(author,subject,holder);
+        require(contentTotalBalance >= totalAmount, "Insufficient shares");
+        uint256 userShareToSell = totalAmount * userTotalShare / contentTotalBalance;
+
+        return userShareToSell;
+    }
+
+    function getTotalSellPriceDetails(address author, string calldata subject, address holder, uint256 amount) public view returns (uint256[] memory) {
         // Assert that the contract addresses are not null
         require(contentContractAddress != address(0), "Content contract address is null");
         require(userContractAddress != address(0), "User contract address is null");
@@ -62,11 +83,7 @@ contract CrossSpaceTradingMain is Ownable {
         CrossSpaceShareUserV2 shareUserContract = CrossSpaceShareUserV2(userContractAddress);
 
          // Let's calculate the amount of user shares to sell for later
-        uint256 userTotalShare = userContractBalance[author][subject][msg.sender];
-        uint256 contentTotalBalance = contentContract.sharesBalance(author,subject,msg.sender);
-        require(contentTotalBalance >= amount, "Insufficient shares");
-        uint256 userShareToSell = amount * userTotalShare / contentTotalBalance;
-
+        uint256 userShareToSell = _getUserAmountToSell(author, subject, holder, amount);
 
         // Let's calculate the fees for content
         uint256 contentTotalBeforeFee = contentContract.getSellPrice(author, subject, amount);
@@ -89,6 +106,9 @@ contract CrossSpaceTradingMain is Ownable {
     }
 
      function buyShares(address author, string calldata subject, uint256 amount) public payable {
+        // Require not paused
+        require(!isPaused, "Contract is paused");
+
         // Assert that the contract addresses are not null
         require(contentContractAddress != address(0), "Content contract address is null");
         require(userContractAddress != address(0), "User contract address is null");
@@ -119,9 +139,18 @@ contract CrossSpaceTradingMain is Ownable {
 
         // Transfer the funds to the user contract and call the buy shares function
         shareUserContract.buyShares{value: userShareFeeAfterFee}(author, msg.sender, userShareAmountInWei);
+
+        // Return the excess payment
+        if (msg.value > grandTotal) {
+            (bool success, ) = msg.sender.call{value: msg.value - grandTotal}("");
+            require(success, "Unable to send funds");
+        }
      }
 
      function sellShares(address author, string calldata subject, uint256 amountInWei) public payable {
+        // Require not paused
+        require(!isPaused, "Contract is paused");
+
         // Assert that the contract addresses are not null
         require(contentContractAddress != address(0), "Content contract address is null");
         require(userContractAddress != address(0), "User contract address is null");

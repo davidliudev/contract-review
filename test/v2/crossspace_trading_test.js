@@ -56,6 +56,9 @@ describe("CrossSpace trading contract v2 operations", function () {
     // Set the protocol wallet
     await shareContentContract.connect(owner).setFeeDestination(addr1.address);
     await shareUserContract.connect(owner).setFeeDestination(addr1.address);
+
+    // Disable the pause state
+    await contract.connect(owner).setPaused(false);
   });
 
   it("get price expect success", async function () {
@@ -335,7 +338,7 @@ describe("CrossSpace trading contract v2 operations", function () {
       ] = testData[i];
       const priceDetails = await contract
         .connect(addr2)
-        .getTotalSellPriceDetails(addr2.address, "subject1", 1);
+        .getTotalSellPriceDetails(addr2.address, "subject1", addr2.address, 1);
       // Validate the array
       expect(priceDetails[0]).to.equal(contentTotalBeforeFee);
       expect(priceDetails[1]).to.equal(contentTotalAfterFee);
