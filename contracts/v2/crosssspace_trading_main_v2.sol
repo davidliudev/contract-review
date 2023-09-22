@@ -147,7 +147,7 @@ contract CrossSpaceTradingMain is Ownable {
         }
      }
 
-     function sellShares(address author, string calldata subject, uint256 amountInWei) public payable {
+     function sellShares(address author, string calldata subject, uint256 amount) public payable {
         // Require not paused
         require(!isPaused, "Contract is paused");
 
@@ -163,12 +163,12 @@ contract CrossSpaceTradingMain is Ownable {
          // Let's calculate the amount of user shares to sell for later
         uint256 userTotalShare = userContractBalance[author][subject][msg.sender];
         uint256 contentTotalBalance = contentContract.sharesBalance(author,subject,msg.sender);
-        require(contentTotalBalance >= amountInWei, "Insufficient shares");
-        uint256 userShareToSell = amountInWei * userTotalShare / contentTotalBalance;
+        require(contentTotalBalance >= amount, "Insufficient shares");
+        uint256 userShareToSell = amount * userTotalShare / contentTotalBalance;
         require(userShareToSell <= userTotalShare, "Insufficient user shares");
 
         // Sell
-        contentContract.sellShares{value: msg.value}(author, subject, msg.sender, amountInWei);
+        contentContract.sellShares{value: msg.value}(author, subject, msg.sender, amount);
         shareUserContract.sellShares(author, msg.sender, userShareToSell);
      }
 }
