@@ -130,13 +130,12 @@ contract CrossSpaceTradingMain is Ownable {
         // Assert that the user sent enough funds
         require(msg.value >= grandTotal, "Not enough funds");
 
-        // Buy the shares for the content contract
-        contentContract.buyShares{value: contentTotalAfterFee}(author, subject, msg.sender, amount);
-
         // Buy the shares for the user contract
         // Save the amount of shares in the mapping
         userContractBalance[author][subject][msg.sender] = userContractBalance[author][subject][msg.sender] + userShareAmountInWei;
 
+        // Buy the shares for the content contract
+        contentContract.buyShares{value: contentTotalAfterFee}(author, subject, msg.sender, amount);
         // Transfer the funds to the user contract and call the buy shares function
         shareUserContract.buyShares{value: userShareFeeAfterFee}(author, msg.sender, userShareAmountInWei);
 
@@ -159,13 +158,13 @@ contract CrossSpaceTradingMain is Ownable {
         CrossSpaceShareContentV2 contentContract = CrossSpaceShareContentV2(contentContractAddress);
         CrossSpaceShareUserV2 shareUserContract = CrossSpaceShareUserV2(userContractAddress);
 
-
          // Let's calculate the amount of user shares to sell for later
         uint256 userTotalShare = userContractBalance[author][subject][msg.sender];
         uint256 contentTotalBalance = contentContract.sharesBalance(author,subject,msg.sender);
         require(contentTotalBalance >= amount, "Insufficient shares");
         uint256 userShareToSell = amount * userTotalShare / contentTotalBalance;
         require(userShareToSell <= userTotalShare, "Insufficient user shares");
+        userContractBalance[author][subject][msg.sender] = userContractBalance[author][subject][msg.sender] - userShareToSell;
 
         // Sell
         contentContract.sellShares{value: msg.value}(author, subject, msg.sender, amount);
