@@ -170,4 +170,8 @@ contract CrossSpaceTradingMain is Ownable {
         contentContract.sellShares{value: msg.value}(author, subject, msg.sender, amount);
         shareUserContract.sellShares(author, msg.sender, userShareToSell);
      }
+
+     function getUserContractBalance(address author, string calldata subject, address holder) public view returns (uint256) {
+         return userContractBalance[author][subject][holder];
+     }
 }
