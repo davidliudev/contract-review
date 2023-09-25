@@ -100,6 +100,7 @@ contract CrossSpaceShareContentV2 is Ownable {
 
         uint256 supply = sharesSupply[author][subject];
         require(supply >= amount, "Cannot sell more than the shares supply");
+        require(supply > amount, "Cannot sell the last share");
         uint256 price = getPrice(supply - amount, amount);
         uint256 protocolFee = price * protocolFeePercent / PERCENT_BASE;
         uint256 subjectFee = price * subjectFeePercent / PERCENT_BASE;

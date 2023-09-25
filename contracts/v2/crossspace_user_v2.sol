@@ -84,6 +84,7 @@ contract CrossSpaceShareUserV2 is Ownable {
         require(msg.sender == parentProtocolAddress, "Caller is not the parent protocol");
 
         uint256 supplyInWei = sharesSupplyInWei[author];
+        require(supplyInWei > 0 || author == sender, "Only the shares' subject owner can buy the first share");
         uint256 price = getPrice(supplyInWei, amountInWei);
         uint256 protocolFee = price * protocolFeePercent / PERCENT_BASE;
         uint256 subjectFee = price * subjectFeePercent / PERCENT_BASE;
@@ -108,6 +109,7 @@ contract CrossSpaceShareUserV2 is Ownable {
 
         uint256 supplyInWei = sharesSupplyInWei[author];
         require(supplyInWei >= amountInWei, "Cannot sell exceeding shares supply");
+        require(supplyInWei > amountInWei, "Cannot sell the last share");
         uint256 price = getPrice(supplyInWei - amountInWei, amountInWei);
         uint256 protocolFee = price * protocolFeePercent / PERCENT_BASE;
         uint256 subjectFee = price * subjectFeePercent / PERCENT_BASE;
