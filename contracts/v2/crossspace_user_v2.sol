@@ -42,7 +42,7 @@ contract CrossSpaceShareUserV2 is Ownable {
 
     function getPrice(uint256 supplyInWei, uint256 amountInWei) public pure returns (uint256) {
         uint256 price = (amountInWei * (amountInWei*amountInWei + 3*amountInWei* supplyInWei + 3*supplyInWei*supplyInWei));
-        uint256 normalizedPrice = price * 1 ether / PRICE_DIVIDER / 3e54;
+        uint256 normalizedPrice = price / PRICE_DIVIDER / 3e36;
         return normalizedPrice;
     }
 
