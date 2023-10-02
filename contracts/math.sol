@@ -1,3 +1,5 @@
+pragma solidity ^0.8.9;
+
 library math {
 /**
       * @dev Compute the largest integer smaller than or equal to the cubic root of `n`

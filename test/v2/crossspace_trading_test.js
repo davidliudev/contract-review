@@ -14,9 +14,6 @@ describe("CrossSpace trading contract v2 operations", function () {
 
   beforeEach(async function () {
     // Get the ContractFactory and Signers here.
-    constructor = await ethers.getContractFactory("CrossSpaceTradingMain");
-    [owner, addr1, addr2, addr3] = await ethers.getSigners();
-    contract = await constructor.deploy();
 
     // We also need to deploy the CrossSpaceShareContentV2 contract CrossSpaceShareUserV2
     const cspShareContent = await ethers.getContractFactory(
@@ -26,18 +23,15 @@ describe("CrossSpace trading contract v2 operations", function () {
       "CrossSpaceShareUserV2"
     );
 
-    shareContentContract = await cspShareContent.deploy();
-    shareUserContract = await cspShareUser.deploy();
+    shareContentContract = await cspShareContent.deploy(32000, true);
+    shareUserContract = await cspShareUser.deploy(32000, true);
 
-    // Set the share content contract address
-    await contract
-      .connect(owner)
-      .setContentContractAddress(shareContentContract.address);
-
-    // Set the share user contract address
-    await contract
-      .connect(owner)
-      .setUserContractAddress(shareUserContract.address);
+    constructor = await ethers.getContractFactory("CrossSpaceTradingMain");
+    [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    contract = await constructor.deploy(
+      shareContentContract.address,
+      shareUserContract.address
+    );
 
     // We also need to set the parent protocol address for the share content contract and share user contract
     await shareContentContract

@@ -12,7 +12,7 @@ describe("CrossSpace user contract v2 operations", function () {
     // Get the ContractFactory and Signers here.
     constructor = await ethers.getContractFactory("CrossSpaceShareUserV2");
     [owner, addr1, addr2, addr3] = await ethers.getSigners();
-    contract = await constructor.deploy();
+    contract = await constructor.deploy(32000, true);
   });
 
   it("get price expect success", async function () {
@@ -61,9 +61,6 @@ describe("CrossSpace user contract v2 operations", function () {
     await contract.connect(owner).setProtocolFeePercent(500);
     await contract.connect(owner).setSubjectFeePercent(500);
 
-    // Set parent protocol address
-    await contract.connect(owner).setParentProtocolAddress(owner.address);
-
     // Set protocol wallet
     await contract.connect(owner).setFeeDestination(addr1.address);
 
@@ -75,7 +72,8 @@ describe("CrossSpace user contract v2 operations", function () {
       .add(firstShareProtocolFee)
       .add(firstShareSubjectFee);
 
-    await contract.connect(owner).buyShares(addr2.address, addr2.address, eth, {
+    await contract.connect(owner).setParentProtocolAddress(addr2.address);
+    await contract.connect(addr2).buyShares(addr2.address, addr2.address, eth, {
       value: firstSharePayment,
     });
 
@@ -86,7 +84,8 @@ describe("CrossSpace user contract v2 operations", function () {
     const secondSharePayment = secondSharePrice
       .add(secondShareProtocolFee)
       .add(secondShareSubjectFee);
-    await contract.connect(owner).buyShares(addr2.address, addr3.address, eth, {
+    await contract.connect(owner).setParentProtocolAddress(addr3.address);
+    await contract.connect(addr3).buyShares(addr2.address, addr3.address, eth, {
       value: secondSharePayment,
     });
 
@@ -121,16 +120,19 @@ describe("CrossSpace user contract v2 operations", function () {
 
     // Validate te subject fee collected
     const currentBalanceAddr2 = await ethers.provider.getBalance(addr2.address);
-    const subjectFeeCollected = currentBalanceAddr2.sub(addr2InitialBalance);
+    const subjectFeeCollected = currentBalanceAddr2
+      .sub(addr2InitialBalance)
+      .add(firstSharePayment); // Need to add back the first payment
     expect(subjectFeeCollected).to.equal(
       firstShareSubjectFee.add(secondShareSubjectFee)
     );
 
     // Now sell the shares fro addr3
-    await contract.connect(owner).sellShares(addr2.address, addr3.address, eth);
+    await contract.connect(addr3).sellShares(addr2.address, addr3.address, eth);
 
     // Sell the shares from addr2
-    await contract.connect(owner).sellShares(addr2.address, addr2.address, eth);
+    await contract.connect(owner).setParentProtocolAddress(addr2.address);
+    await contract.connect(addr2).sellShares(addr2.address, addr2.address, eth);
 
     // Validate the shares balances
     const shareBalanceFromAddr2AfterSell = await contract
@@ -178,10 +180,10 @@ describe("CrossSpace user contract v2 operations", function () {
       .add(secondShareSubjectFee)
       .mul(2);
 
-    const sellGain = BigNumber.from(eth.div(96000));
-    const sellFee = BigNumber.from(sellGain.mul(1000).div(10000));
+    const sellPrice = BigNumber.from(eth.div(96000)); // We never gain anything from buy/sell the share since the price is the same. Thus only the cost of the fee is counted below
+    const sellFee = BigNumber.from(sellPrice.mul(1000).div(10000)).mul(2);
 
-    const totalGain = sellGain.sub(sellFee).add(subjectFeeExpected);
+    const totalGain = subjectFeeExpected.sub(sellFee);
 
     expect(newFeeAfterSell).to.equal(totalGain);
 
@@ -192,10 +194,12 @@ describe("CrossSpace user contract v2 operations", function () {
     const newBalanceAddr3AfterSell =
       currentBalanceAddr3AfterSell.sub(addr3InitialBalance);
 
-    const addr3SellGain = BigNumber.from(eth.mul(7).div(96000));
-    const addr3SellFee = BigNumber.from(addr3SellGain.mul(1000).div(10000));
+    const addr3SellPrice = BigNumber.from(eth.mul(7).div(96000)); // Again, add3 gain nothing from trading for the same reason as above
+    const addr3SellFee = BigNumber.from(
+      addr3SellPrice.mul(1000).div(10000)
+    ).mul(2);
 
-    const addr3TotalGain = addr3SellGain.sub(addr3SellFee);
+    const addr3TotalGain = BigNumber.from(0).sub(addr3SellFee);
 
     expect(newBalanceAddr3AfterSell).to.equal(addr3TotalGain);
   });
@@ -223,7 +227,8 @@ describe("CrossSpace user contract v2 operations", function () {
     expect(buyPriceAfterFee).to.equal(eth.div(96000).mul(11).div(10));
 
     // buy shares from self
-    await contract.connect(owner).buyShares(addr2.address, addr2.address, eth, {
+    await contract.connect(owner).setParentProtocolAddress(addr2.address);
+    await contract.connect(addr2).buyShares(addr2.address, addr2.address, eth, {
       value: eth.div(96000).mul(11).div(10),
     });
 
@@ -256,7 +261,7 @@ describe("CrossSpace user contract v2 operations", function () {
     );
 
     // Sell the shares from addr2
-    await contract.connect(owner).sellShares(addr2.address, addr2.address, eth);
+    await contract.connect(addr2).sellShares(addr2.address, addr2.address, eth);
 
     // Validate the buyPrices and buyPricesAfterFee
     const buyPriceAfterSell = await contract
@@ -300,9 +305,10 @@ describe("CrossSpace user contract v2 operations", function () {
     ).to.be.revertedWith("Caller is not the parent protocol");
 
     // Should fail to buy shares if payment is not enough
+    await contract.connect(owner).setParentProtocolAddress(addr2.address);
     // Buy shares
     await expect(
-      contract.connect(owner).buyShares(addr2.address, addr2.address, eth, {
+      contract.connect(addr2).buyShares(addr2.address, addr2.address, eth, {
         value: eth.div(96000).mul(11).div(10).sub(1),
       })
     ).to.be.revertedWith("Insufficient payment");
@@ -310,33 +316,35 @@ describe("CrossSpace user contract v2 operations", function () {
     // Should fail to sell shares if shares are not available
     // Sell shares
     await expect(
-      contract.connect(owner).sellShares(addr2.address, addr2.address, eth)
+      contract.connect(addr2).sellShares(addr2.address, addr2.address, eth)
     ).to.be.revertedWith("Cannot sell exceeding shares supply");
 
     // Now let's buy share normally
     // Buy shares
-    await contract.connect(owner).buyShares(addr2.address, addr2.address, eth, {
+    await contract.connect(addr2).buyShares(addr2.address, addr2.address, eth, {
       value: eth.div(96000).mul(11).div(10),
     });
 
     // Sell shares
     await expect(
       contract
-        .connect(owner)
+        .connect(addr2)
         .sellShares(addr2.address, addr2.address, eth.add(1))
     ).to.be.revertedWith("Cannot sell exceeding shares supply");
 
     // Let's buy from another address
     // Buy shares
-    await contract.connect(owner).buyShares(addr2.address, addr3.address, eth, {
+    await contract.connect(owner).setParentProtocolAddress(addr3.address);
+    await contract.connect(addr3).buyShares(addr2.address, addr3.address, eth, {
       value: eth.mul(7).div(96000).mul(11).div(10),
     });
 
     // Should fail to sell shares if amount is more than balance
     // Sell shares
+    await contract.connect(owner).setParentProtocolAddress(addr2.address);
     await expect(
       contract
-        .connect(owner)
+        .connect(addr2)
         .sellShares(addr2.address, addr2.address, eth.mul(2))
     ).to.be.revertedWith("Insufficient shares");
   });

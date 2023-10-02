@@ -1,11 +1,12 @@
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../math.sol";
 import "./crossspace_content_v2.sol";
 import "./crossspace_user_v2.sol";
 
-contract CrossSpaceTradingMain is Ownable {
+contract CrossSpaceTradingMain is Ownable, ReentrancyGuard {
     address public contentContractAddress;
     address public userContractAddress;
     bool public isPaused;
@@ -13,20 +14,17 @@ contract CrossSpaceTradingMain is Ownable {
     // Author => Subject => (Holder => User Contract Balance)
     mapping(address => mapping(string => mapping(address => uint256))) public userContractBalance;
 
-    constructor() {
-        isPaused = true;
-    }
+    event TradingPaused(bool isPaused);
 
-    function setContentContractAddress(address _contentContractAddress) public onlyOwner {
+    constructor(address _contentContractAddress, address _userContractAddress) {
         contentContractAddress = _contentContractAddress;
-    }
-
-    function setUserContractAddress(address _userContractAddress) public onlyOwner {
         userContractAddress = _userContractAddress;
+        isPaused = true;
     }
 
     function setPaused(bool _isPaused) public onlyOwner {
         isPaused = _isPaused;
+        emit TradingPaused(_isPaused);
     }
 
     function getTotalBuyPriceDetails(address author, string calldata subject, uint256 amount) public view returns (uint256[] memory) {
@@ -105,7 +103,7 @@ contract CrossSpaceTradingMain is Ownable {
         return result;
     }
 
-     function buyShares(address author, string calldata subject, uint256 amount) public payable {
+     function buyShares(address author, string calldata subject, uint256 amount) public payable nonReentrant {
         // Require not paused
         require(!isPaused, "Contract is paused");
 
@@ -146,7 +144,7 @@ contract CrossSpaceTradingMain is Ownable {
         }
      }
 
-     function sellShares(address author, string calldata subject, uint256 amount) public payable {
+     function sellShares(address author, string calldata subject, uint256 amount) public nonReentrant {
         // Require not paused
         require(!isPaused, "Contract is paused");
 
@@ -167,7 +165,7 @@ contract CrossSpaceTradingMain is Ownable {
         userContractBalance[author][subject][msg.sender] = userContractBalance[author][subject][msg.sender] - userShareToSell;
 
         // Sell
-        contentContract.sellShares{value: msg.value}(author, subject, msg.sender, amount);
+        contentContract.sellShares(author, subject, msg.sender, amount);
         shareUserContract.sellShares(author, msg.sender, userShareToSell);
      }
 
